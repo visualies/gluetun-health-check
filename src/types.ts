@@ -30,7 +30,6 @@ export interface AttachedContainer extends ContainerInfo {
 export interface HealthCheckConfig {
   checkInterval: number; // in milliseconds
   gluetunImagePattern: string;
-  unhealthyThreshold: number;
+  unhealthyThreshold: number; // kept for potential future use
   dryRun: boolean;
-  enableHealthChecks: boolean;
 } 

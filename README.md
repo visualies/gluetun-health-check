@@ -1,26 +1,35 @@
 # Gluetun Health Check Monitor
 
-A Bun application that monitors Docker containers attached to Gluetun VPN containers and automatically redeploys them when they become orphaned (pointing to dead Gluetun containers).
+A specialized monitoring application that ensures Docker containers attached to Gluetun VPN containers maintain proper network connectivity. Automatically detects and fixes two critical scenarios that break VPN network connections.
 
-## 🚀 **Zero Configuration Required**
+## 🎯 **Two Core Features**
 
-**This application works out-of-the-box with full auto-discovery!** Simply run it and it will:
-- 🔍 **Auto-detect** Gluetun containers using multiple detection methods
-- 🔗 **Auto-discover** containers attached to Gluetun networks
-- 🚨 **Auto-monitor** for orphaned containers (pointing to dead Gluetun instances)
-- 🔄 **Auto-redeploy** orphaned containers to attach them to current Gluetun containers
+**This application solves exactly two problems:**
 
-**Primary Focus**: Handles the "Gluetun restart scenario" where attached containers lose network connectivity when Gluetun gets a new container ID.
+### 1. 🔍 **Orphan Detection** 
+When Gluetun containers are **recreated** (new container ID), attached containers become orphaned and lose all network connectivity.
 
-No manual configuration or container listing required - just start the monitor and it handles everything automatically!
+### 2. 🔄 **Broken Network Detection**
+When Gluetun containers **restart** (same container ID), attached containers keep running but lose network connectivity.
+
+**Zero configuration required** - automatically detects and fixes both scenarios!
+
+## 🚀 **How It Works**
+
+**Orphan Detection:**
+- Detects containers pointing to dead/non-existent Gluetun container IDs
+- Automatically reattaches them to current running Gluetun containers
+- Recreates containers with updated network configuration
+
+**Broken Network Detection:**  
+- Compares container start times to detect when Gluetun restarted after attached containers
+- Identifies broken network connections even when container IDs match
+- Recreates affected containers to reestablish network connectivity
 
 ## Quick Start
 
-### Using Pre-built Image (Recommended)
-
 **Basic usage - works immediately:**
 ```bash
-# Simple and effective - works immediately
 docker run -d \
   --name gluetun-health-check \
   --restart unless-stopped \
@@ -28,33 +37,30 @@ docker run -d \
   ghcr.io/visualies/gluetun-health-check:latest
 ```
 
-### Using Docker Compose
-
-```yaml
-version: '3.8'
-services:
-  gluetun-health-check:
-    image: ghcr.io/visualies/gluetun-health-check:latest
-    container_name: gluetun-health-check
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    # Optional: Override defaults
-    environment:
-      - CHECK_INTERVAL=30000  # 30 seconds
-      - DRY_RUN=false
-      - ENABLE_HEALTH_CHECKS=false  # Enable traditional health check monitoring (default: false)
-```
-
 ## Features
 
 - 🔍 **Auto-discovery**: Automatically detects Gluetun containers by image name pattern
 - 🔗 **Network Detection**: Finds containers using `container:` network mode attached to Gluetun
-- 🚨 **Orphaned Container Detection**: Detects containers pointing to dead Gluetun instances (primary feature)
-- 🏥 **Optional Health Monitoring**: Traditional health check monitoring (disabled by default)
-- 🔄 **Auto-redeployment**: Automatically redeploys orphaned containers with updated network configuration
+- 🚨 **Orphan Detection**: Detects containers pointing to dead Gluetun instances (Feature 1)
+- 🔄 **Broken Network Detection**: Detects when Gluetun restarts break network connections (Feature 2)
+- 🛠️ **Automatic Recreation**: Recreates containers with proper VPN network configuration
 - ⚙️ **Configurable**: Environment variable based configuration
-- 🧪 **Dry Run Mode**: Test mode to see what would be redeployed without actually doing it
+- 🧪 **Dry Run Mode**: Test mode to see what would be recreated without actually doing it
+
+## Container Recreation Process
+
+When an orphaned or network-broken container is detected, the application:
+
+1. **Stops** the problematic container
+2. **Removes** the container completely  
+3. **Recreates** it with identical configuration + updated network mode
+4. **Starts** the new container with proper VPN connectivity
+
+This approach:
+- ✅ **Preserves all settings** - environment variables, volumes, labels, healthchecks, etc.
+- ✅ **Updates network configuration** - points to current running Gluetun container
+- ✅ **Fast and reliable** - typically completes in 10-30 seconds
+- ✅ **Handles both scenarios** - orphaned containers and broken network connections
 
 ## How It Works
 
@@ -62,21 +68,6 @@ services:
 2. **Attachment Detection**: Identifies containers using `NetworkMode: "container:GLUETUN_ID"`
 3. **Health Check**: Monitors the health status of attached containers
 4. **Container Recreation**: When unhealthy, stops, removes, and recreates containers with the same configuration
-
-## Redeployment Process
-
-When an unhealthy container is detected, the application:
-
-1. **Stops** the unhealthy container
-2. **Removes** the container completely
-3. **Recreates** it with the exact same configuration (image, environment, network settings, etc.)
-4. **Starts** the new container
-
-This approach:
-- ✅ **Works through Docker socket only** - no compose files needed
-- ✅ **Preserves all configuration** - same image, env vars, network mode, etc.
-- ✅ **Fast and reliable** - typically completes in 10-30 seconds
-- ✅ **Handles most issues** - network problems, process crashes, corrupted state
 
 ## Usage
 

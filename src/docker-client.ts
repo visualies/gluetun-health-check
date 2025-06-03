@@ -179,18 +179,19 @@ export class DockerClient {
       return true;
     }
     
-    // Check if container is pointing to a dead network target (orphaned)
-    // This happens when Gluetun restarts and gets a new container ID
+    // FEATURE 1: Orphan Detection - Check if container is pointing to a dead network target
+    // This happens when Gluetun gets recreated and gets a new container ID
     const currentNetworkTarget = container.networkMode.replace('container:', '');
     const isPointingToCurrentGluetun = container.gluetunContainer.id === currentNetworkTarget || 
                                       container.gluetunContainer.id.startsWith(currentNetworkTarget);
     
     if (!isPointingToCurrentGluetun) {
-      console.log(`🚨 Container ${container.name} is orphaned (pointing to dead network target)`);
+      console.log(`🚨 ORPHAN: ${container.name} points to dead container ${currentNetworkTarget.substring(0, 12)}...`);
       return true;
     }
     
-    // Check if Gluetun container restarted after this container (breaking network connection)
+    // FEATURE 2: Broken Network Detection - Check if Gluetun restarted after this container
+    // This happens when Gluetun restarts (same ID) but breaks network connections
     try {
       const [attachedContainerInfo, gluetunContainerInfo] = await Promise.all([
         this.docker.getContainer(container.id).inspect(),
@@ -202,7 +203,7 @@ export class DockerClient {
       
       if (gluetunStartTime > attachedStartTime) {
         const timeDiff = Math.round((gluetunStartTime.getTime() - attachedStartTime.getTime()) / 1000);
-        console.log(`🔄 Gluetun ${container.gluetunContainer.name} restarted ${timeDiff}s after ${container.name} - network connection broken`);
+        console.log(`🚨 BROKEN NETWORK: Gluetun ${container.gluetunContainer.name} restarted ${timeDiff}s after ${container.name}`);
         return true;
       }
     } catch (error) {
@@ -210,13 +211,7 @@ export class DockerClient {
       // If we can't check, assume it's healthy to avoid unnecessary restarts
     }
     
-    // Only check traditional health checks if enabled
-    if (this.config.enableHealthChecks && container.health) {
-      return container.health.status === 'unhealthy' && 
-             container.health.failingStreak >= this.config.unhealthyThreshold;
-    }
-    
-    // If no health check is enabled or defined, assume it's healthy if running and not orphaned
+    // Container is healthy - pointing to current Gluetun and network connection is intact
     return false;
   }
 
