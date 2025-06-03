@@ -8,8 +8,8 @@ on:
     branches: [main]
 
 jobs:
-  # Fast build for main branch (amd64 only)
   build-fast:
+    # Fast build for main branch (amd64 only)
     if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -61,14 +61,14 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-  - name: Summary 
-    if: github.event_name != 'pull_request'
-    run: |
-      echo "## 🚀 Published: \`ghcr.io/${{ github.repository }}:latest\`" >> $GITHUB_STEP_SUMMARY
-      echo "" >> $GITHUB_STEP_SUMMARY
-      echo "**Usage:**" >> $GITHUB_STEP_SUMMARY
-      echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-      echo "docker run -d --name gluetun-health-check \\" >> $GITHUB_STEP_SUMMARY
-      echo "  -v /var/run/docker.sock:/var/run/docker.sock \\" >> $GITHUB_STEP_SUMMARY
-      echo "  ghcr.io/${{ github.repository }}:latest" >> $GITHUB_STEP_SUMMARY
-      echo "\`\`\`" >> $GITHUB_STEP_SUMMARY 
+    - name: Summary 
+      if: github.event_name != 'pull_request'
+      run: |
+        echo "## 🚀 Published: \`ghcr.io/${{ github.repository }}:latest\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Usage:**" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+        echo "docker run -d --name gluetun-health-check \\" >> $GITHUB_STEP_SUMMARY
+        echo "  -v /var/run/docker.sock:/var/run/docker.sock \\" >> $GITHUB_STEP_SUMMARY
+        echo "  ghcr.io/${{ github.repository }}:latest" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY 
