@@ -16,8 +16,9 @@ No manual configuration or container listing required - just start the monitor a
 
 ### Using Pre-built Image (Recommended)
 
+**Basic usage - works immediately:**
 ```bash
-# Run with Docker - no special flags needed!
+# Simple and effective - works immediately
 docker run -d \
   --name gluetun-health-check \
   --restart unless-stopped \
@@ -57,20 +58,22 @@ services:
 1. **Discovery**: Scans all Docker containers to find Gluetun instances (by image pattern)
 2. **Attachment Detection**: Identifies containers using `NetworkMode: "container:GLUETUN_ID"`
 3. **Health Check**: Monitors the health status of attached containers
-4. **Redeployment**: When containers are unhealthy, extracts their Docker Compose configuration and redeploys them
+4. **Container Recreation**: When unhealthy, stops, removes, and recreates containers with the same configuration
 
-## Configuration
+## Redeployment Process
 
-Configure the application using environment variables:
+When an unhealthy container is detected, the application:
 
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `CHECK_INTERVAL` | `30000` | Health check interval in milliseconds (30 seconds) |
-| `GLUETUN_IMAGE_PATTERN` | `gluetun` | Pattern to match Gluetun container images |
-| `UNHEALTHY_THRESHOLD` | `2` | Number of consecutive health check failures before redeployment |
-| `DRY_RUN` | `false` | If `true`, logs what would be done without executing |
+1. **Stops** the unhealthy container
+2. **Removes** the container completely
+3. **Recreates** it with the exact same configuration (image, environment, network settings, etc.)
+4. **Starts** the new container
 
-**Note**: All configuration is optional - the app works perfectly with default settings!
+This approach:
+- ✅ **Works through Docker socket only** - no compose files needed
+- ✅ **Preserves all configuration** - same image, env vars, network mode, etc.
+- ✅ **Fast and reliable** - typically completes in 10-30 seconds
+- ✅ **Handles most issues** - network problems, process crashes, corrupted state
 
 ## Usage
 
@@ -146,31 +149,25 @@ The application looks for containers with:
 
 1. **Network Mode**: `container:GLUETUN_CONTAINER_ID`
 2. **Gluetun Container**: Must match one of the detection methods above
-3. **Compose Labels**: Uses Docker Compose labels to determine redeployment commands:
-   - `com.docker.compose.project`: The compose project name
-   - `com.docker.compose.project.config_files`: Path to the compose file
 
-## Redeployment Process
+## What Gets Preserved vs Recreated
 
-When an unhealthy container is detected:
+When recreating an unhealthy container, the application:
 
-1. **Extract Information**: Gets compose project name and file path from container labels
-2. **Generate Command**: Creates Docker Compose command:
-   ```bash
-   docker compose -p PROJECT_NAME -f COMPOSE_FILE up -d --build --remove-orphans --force-recreate
-   ```
-3. **Execute**: Runs the command to redeploy the container
+**✅ Preserves:**
+- Image and tag
+- Environment variables  
+- Volume mounts
+- Labels
+- Port mappings
+- User settings
 
-### Example
+**🔄 Recreates Fresh:**
+- **Network configuration** - Gets new Gluetun container ID automatically
+- Container ID and name
+- Process state
 
-For a container with labels:
-- `com.docker.compose.project`: `seedbox-prowlarr-bgcxe9`
-- `com.docker.compose.project.config_files`: `/etc/dokploy/compose/seedbox-prowlarr-bgcxe9/code/prowlarr/docker-compose.yml`
-
-The redeployment command would be:
-```bash
-docker compose -p seedbox-prowlarr-bgcxe9 -f ./prowlarr/docker-compose.yml up -d --build --remove-orphans --force-recreate
-```
+**Why this matters:** When Gluetun restarts, attached containers become unhealthy because they're still pointing to the old Gluetun container ID. Recreation allows Docker to automatically reattach to the current running Gluetun container.
 
 ## Container Health Detection
 
@@ -183,8 +180,9 @@ A container is considered unhealthy if:
 ## Requirements
 
 - Docker socket access (`/var/run/docker.sock`)
-- Docker and Docker Compose installed in the container
-- Appropriate permissions to execute Docker commands
+- Appropriate permissions to access Docker API
+
+The application handles everything else automatically through the Docker API.
 
 ## Logging
 

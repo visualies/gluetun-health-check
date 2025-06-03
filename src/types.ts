@@ -25,8 +25,6 @@ export interface GluetunContainer {
 
 export interface AttachedContainer extends ContainerInfo {
   gluetunContainer: GluetunContainer;
-  composeProject?: string;
-  composeFile?: string;
 }
 
 export interface HealthCheckConfig {

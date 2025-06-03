@@ -1,9 +1,5 @@
 import Docker from 'dockerode';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import type { ContainerInfo, GluetunContainer, AttachedContainer, HealthCheckConfig } from './types.js';
-
-const execAsync = promisify(exec);
 
 export class DockerClient {
   private docker: Docker;
@@ -131,18 +127,6 @@ export class DockerClient {
             gluetunContainer,
           };
           
-          // Extract compose project and file information from labels
-          const composeProject = container.labels['com.docker.compose.project'];
-          const composeConfigFiles = container.labels['com.docker.compose.project.config_files'];
-          
-          if (composeProject) {
-            attachedContainer.composeProject = composeProject;
-          }
-          
-          if (composeConfigFiles) {
-            attachedContainer.composeFile = composeConfigFiles;
-          }
-          
           attachedContainers.push(attachedContainer);
         }
       }
@@ -168,66 +152,46 @@ export class DockerClient {
   }
 
   async redeployContainer(container: AttachedContainer): Promise<void> {
-    console.log(`🔄 Redeploying container: ${container.name}`);
+    console.log(`🔄 Recreating container: ${container.name}`);
     
-    if (!container.composeProject) {
-      console.error(`❌ No compose project found for container: ${container.name}`);
-      return;
-    }
-    
-    // Extract the relative path from the compose file path
-    let composeFilePath = './docker-compose.yml'; // default
-    
-    if (container.composeFile) {
-      // Extract the relative path from the absolute path
-      // Example: "/etc/dokploy/compose/seedbox-prowlarr-bgcxe9/code/prowlarr/docker-compose.yml"
-      // We want to extract "prowlarr/docker-compose.yml" or similar
-      const parts = container.composeFile.split('/');
-      const codeIndex = parts.findIndex(part => part === 'code');
-      if (codeIndex !== -1 && codeIndex < parts.length - 1) {
-        composeFilePath = './' + parts.slice(codeIndex + 1).join('/');
-      }
-    }
-    
-    // Try docker compose (new) first, fallback to docker-compose (legacy)
-    const commands = [
-      `docker compose -p ${container.composeProject} -f ${composeFilePath} up -d --build --remove-orphans --force-recreate`,
-      `docker-compose -p ${container.composeProject} -f ${composeFilePath} up -d --build --remove-orphans --force-recreate`
-    ];
-    
-    if (this.config.dryRun) {
-      console.log(`🔍 DRY RUN: Would execute: ${commands[0]}`);
-      return;
-    }
-    
-    for (const command of commands) {
-      console.log(`🔧 Executing: ${command}`);
+    try {
+      const dockerContainer = this.docker.getContainer(container.id);
+      const containerInfo = await dockerContainer.inspect();
       
-      try {
-        const { stdout, stderr } = await execAsync(command);
-        
-        if (stdout) {
-          console.log(`✅ Redeploy stdout: ${stdout}`);
-        }
-        
-        if (stderr) {
-          console.log(`⚠️ Redeploy stderr: ${stderr}`);
-        }
-        
-        console.log(`✅ Successfully redeployed container: ${container.name}`);
-        return; // Success, exit the loop
-      } catch (error: any) {
-        console.log(`⚠️ Command failed: ${command}`);
-        
-        // If this is the last command, throw the error
-        if (command === commands[commands.length - 1]) {
-          console.error(`❌ Failed to redeploy container ${container.name}:`, error);
-          throw error;
-        }
-        
-        // Otherwise, try the next command
-        console.log(`🔄 Trying fallback command...`);
+      if (this.config.dryRun) {
+        console.log(`🔍 DRY RUN: Would recreate container: ${container.name}`);
+        return;
       }
+      
+      console.log(`🛑 Stopping container: ${container.name}`);
+      await dockerContainer.stop();
+      
+      console.log(`🗑️ Removing container: ${container.name}`);
+      await dockerContainer.remove();
+      
+      // Create a new container with the same configuration
+      const createOptions = {
+        Image: containerInfo.Config.Image,
+        Cmd: containerInfo.Config.Cmd,
+        Env: containerInfo.Config.Env,
+        ExposedPorts: containerInfo.Config.ExposedPorts,
+        Labels: containerInfo.Config.Labels,
+        WorkingDir: containerInfo.Config.WorkingDir,
+        User: containerInfo.Config.User,
+        HostConfig: containerInfo.HostConfig,
+        name: containerInfo.Name.substring(1), // Remove leading slash
+      };
+      
+      console.log(`🏗️ Creating new container: ${container.name}`);
+      const newContainer = await this.docker.createContainer(createOptions);
+      
+      console.log(`▶️ Starting container: ${container.name}`);
+      await newContainer.start();
+      
+      console.log(`✅ Successfully recreated container: ${container.name}`);
+    } catch (error) {
+      console.error(`❌ Failed to recreate container ${container.name}:`, error);
+      throw error;
     }
   }
 
