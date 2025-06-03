@@ -14,11 +14,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-username/gluetun-health-check.git"
+    "url": "git+https://github.com/visualies/gluetun-health-check.git"
   },
-  "homepage": "https://github.com/your-username/gluetun-health-check#readme",
+  "homepage": "https://github.com/visualies/gluetun-health-check#readme",
   "bugs": {
-    "url": "https://github.com/your-username/gluetun-health-check/issues"
+    "url": "https://github.com/visualies/gluetun-health-check/issues"
   },
   "dependencies": {
     "dockerode": "^4.0.2"

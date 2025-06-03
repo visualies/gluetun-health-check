@@ -22,7 +22,7 @@ docker run -d \
   --name gluetun-health-check \
   --restart unless-stopped \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  ghcr.io/your-username/gluetun-health-check:latest
+  ghcr.io/visualies/gluetun-health-check:latest
 ```
 
 ### Using Docker Compose
@@ -31,7 +31,7 @@ docker run -d \
 version: '3.8'
 services:
   gluetun-health-check:
-    image: ghcr.io/your-username/gluetun-health-check:latest
+    image: ghcr.io/visualies/gluetun-health-check:latest
     container_name: gluetun-health-check
     restart: unless-stopped
     volumes:
@@ -84,7 +84,7 @@ docker run -d \
   --name gluetun-health-check \
   --restart unless-stopped \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  ghcr.io/your-username/gluetun-health-check:latest
+  ghcr.io/visualies/gluetun-health-check:latest
 
 # With custom configuration
 docker run -d \
@@ -93,7 +93,7 @@ docker run -d \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -e CHECK_INTERVAL=60000 \
   -e DRY_RUN=true \
-  ghcr.io/your-username/gluetun-health-check:latest
+  ghcr.io/visualies/gluetun-health-check:latest
 ```
 
 ### Development
@@ -113,7 +113,7 @@ bun run start
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/gluetun-health-check.git
+git clone https://github.com/visualies/gluetun-health-check.git
 cd gluetun-health-check
 
 # Build the Docker image
