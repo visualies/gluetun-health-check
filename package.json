@@ -1,0 +1,28 @@
+{
+  "name": "gluetun-health-check",
+  "version": "1.0.0",
+  "description": "Monitor and redeploy containers attached to Gluetun network",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir ./dist --target bun",
+    "type-check": "bunx tsc --noEmit",
+    "test": "node --loader ts-node/esm src/test.ts",
+    "start:node": "node --loader ts-node/esm src/index.ts"
+  },
+  "dependencies": {
+    "dockerode": "^4.0.2"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^3.3.23",
+    "@types/node": "^20.10.0",
+    "bun-types": "^1.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.3"
+  },
+  "keywords": ["docker", "health-check", "gluetun", "container-monitoring"],
+  "author": "",
+  "license": "MIT"
+} 

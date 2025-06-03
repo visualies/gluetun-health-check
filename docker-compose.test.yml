@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # Mock Gluetun container (using alpine with gluetun in the name)
+  mock-gluetun:
+    image: alpine:latest
+    container_name: mock-gluetun-test
+    ports:
+      - "8000:8000"
+      - "8080:8080"
+    restart: unless-stopped
+    command: ["sh", "-c", "echo 'Mock Gluetun running' && sleep infinity"]
+    healthcheck:
+      test: ["CMD", "echo", "healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    labels:
+      - "app=gluetun"
+      - "image=qmcgaw/gluetun"
+
+  # Demo app that will initially be unhealthy
+  demo-app:
+    image: nginx:alpine
+    container_name: demo-app-test
+    network_mode: "container:mock-gluetun-test"
+    volumes:
+      - ./test-html:/usr/share/nginx/html:ro
+    restart: unless-stopped
+    depends_on:
+      - mock-gluetun
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 1
+      start_period: 10s
+    labels:
+      - "com.docker.compose.project=test-project"
+      - "com.docker.compose.project.config_files=/Users/luca.privat/Projects/phee_cms/gluetun-health-check/docker-compose.test.yml"
+
+  # Another demo app that will be healthy
+  demo-app-healthy:
+    image: alpine:latest
+    container_name: demo-app-healthy-test
+    network_mode: "container:mock-gluetun-test"
+    restart: unless-stopped
+    depends_on:
+      - mock-gluetun
+    command: ["sh", "-c", "while true; do echo 'Healthy app running'; sleep 30; done"]
+    healthcheck:
+      test: ["CMD", "echo", "healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 2
+      start_period: 5s
+    labels:
+      - "com.docker.compose.project=test-project-healthy"
+      - "com.docker.compose.project.config_files=/Users/luca.privat/Projects/phee_cms/gluetun-health-check/docker-compose.test.yml" 

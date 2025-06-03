@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Demo App</title>
+</head>
+<body>
+    <h1>Demo Application</h1>
+    <p>This is a test application running through Gluetun network.</p>
+    <p>Time: <span id="time"></span></p>
+    
+    <script>
+        function updateTime() {
+            document.getElementById('time').textContent = new Date().toLocaleString();
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html> 

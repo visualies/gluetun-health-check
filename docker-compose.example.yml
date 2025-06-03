@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  gluetun-health-check:
+    build: .
+    container_name: gluetun-health-check
+    restart: unless-stopped
+    volumes:
+      # Required: Docker socket access for container management
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Optional: If you need to access compose files from host
+      # - /path/to/compose/files:/compose:ro
+    environment:
+      # Health check interval in milliseconds (5 minutes)
+      - CHECK_INTERVAL=300000
+      # Pattern to match Gluetun container images  
+      - GLUETUN_IMAGE_PATTERN=gluetun
+      # Number of consecutive failures before redeployment
+      - UNHEALTHY_THRESHOLD=2
+      # Enable dry run mode for testing
+      - DRY_RUN=false
+    # Optional: Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+    # Optional: Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3" 
