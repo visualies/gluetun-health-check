@@ -261,11 +261,22 @@ export class DockerClient {
       
       // Create a new container with updated configuration
       // Start with the complete original configuration
+      const { 
+        ExposedPorts, 
+        Hostname, 
+        Domainname, 
+        ...baseConfig 
+      } = containerInfo.Config;
+      
       const createOptions = {
-        // Preserve ALL original Config settings
-        ...containerInfo.Config,
-        // Only override network-incompatible settings
-        ExposedPorts: updatedHostConfig.NetworkMode.startsWith('container:') ? undefined : containerInfo.Config.ExposedPorts,
+        // Preserve ALL original Config settings (except network-incompatible ones)
+        ...baseConfig,
+        // Only include non-conflicting properties for container network mode
+        ...(updatedHostConfig.NetworkMode.startsWith('container:') ? {} : {
+          ExposedPorts,
+          Hostname,
+          Domainname,
+        }),
         // Preserve ALL original HostConfig settings with network mode update
         HostConfig: updatedHostConfig,
         // Set the container name (remove leading slash from inspect result)
@@ -281,6 +292,9 @@ export class DockerClient {
       
       console.log(`🔒 SECURE: Creating container with network mode: ${createOptions.HostConfig.NetworkMode}`);
       console.log(`📋 Preserving ALL original settings: Image, Env (${containerInfo.Config.Env?.length || 0} vars), Labels, Volumes, Healthcheck, etc.`);
+      if (updatedHostConfig.NetworkMode.startsWith('container:')) {
+        console.log(`🚫 Excluded network-incompatible settings: ExposedPorts, Hostname, Domainname`);
+      }
       console.log(`🏗️ Creating new container: ${container.name} -> ${container.gluetunContainer.name}`);
       const newContainer = await this.docker.createContainer(createOptions);
       
