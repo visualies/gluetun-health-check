@@ -212,21 +212,51 @@ export class DockerClient {
         return;
       }
       
+      // CRITICAL SAFETY CHECK: Ensure target Gluetun container exists and is running
+      const targetGluetun = this.docker.getContainer(container.gluetunContainer.id);
+      let targetGluetunInfo;
+      try {
+        targetGluetunInfo = await targetGluetun.inspect();
+      } catch (error) {
+        console.error(`🚨 CRITICAL ERROR: Target Gluetun container ${container.gluetunContainer.name} not found!`);
+        console.error(`❌ Cannot recreate ${container.name} - would create container without VPN protection!`);
+        throw new Error(`Target Gluetun container not accessible: ${error}`);
+      }
+      
+      if (targetGluetunInfo.State.Status !== 'running') {
+        console.error(`🚨 CRITICAL ERROR: Target Gluetun container ${container.gluetunContainer.name} is not running (${targetGluetunInfo.State.Status})!`);
+        console.error(`❌ Cannot recreate ${container.name} - would create container without VPN protection!`);
+        throw new Error(`Target Gluetun container is not running: ${targetGluetunInfo.State.Status}`);
+      }
+      
+      console.log(`✅ Verified target Gluetun container ${container.gluetunContainer.name} is running`);
+      
       console.log(`🛑 Stopping container: ${container.name}`);
       await dockerContainer.stop();
       
       console.log(`🗑️ Removing container: ${container.name}`);
       await dockerContainer.remove();
       
+      // CRITICAL: Build network mode with verified Gluetun container
+      const secureNetworkMode = `container:${container.gluetunContainer.id}`;
+      
       // Update network mode to point to current Gluetun container
       const updatedHostConfig = {
         ...containerInfo.HostConfig,
-        NetworkMode: `container:${container.gluetunContainer.id}`
+        NetworkMode: secureNetworkMode
       };
       
       // Remove port bindings when using container network mode
       if (updatedHostConfig.NetworkMode.startsWith('container:')) {
         delete updatedHostConfig.PortBindings;
+      }
+      
+      // CRITICAL VALIDATION: Ensure we have proper network isolation
+      if (!updatedHostConfig.NetworkMode.startsWith('container:')) {
+        console.error(`🚨 CRITICAL ERROR: Network mode validation failed!`);
+        console.error(`❌ Expected: container:${container.gluetunContainer.id}`);
+        console.error(`❌ Got: ${updatedHostConfig.NetworkMode}`);
+        throw new Error('Network mode validation failed - refusing to create container without VPN protection');
       }
       
       // Create a new container with updated configuration
@@ -243,13 +273,34 @@ export class DockerClient {
         name: containerInfo.Name.substring(1), // Remove leading slash
       };
       
+      // FINAL SAFETY CHECK: Verify create options have secure network mode
+      if (!createOptions.HostConfig.NetworkMode.startsWith('container:')) {
+        console.error(`🚨 CRITICAL ERROR: Final validation failed!`);
+        console.error(`❌ Create options network mode: ${createOptions.HostConfig.NetworkMode}`);
+        throw new Error('Final network mode validation failed - aborting container creation');
+      }
+      
+      console.log(`🔒 SECURE: Creating container with network mode: ${createOptions.HostConfig.NetworkMode}`);
       console.log(`🏗️ Creating new container: ${container.name} -> ${container.gluetunContainer.name}`);
       const newContainer = await this.docker.createContainer(createOptions);
       
       console.log(`▶️ Starting container: ${container.name}`);
       await newContainer.start();
       
+      // POST-CREATION VERIFICATION: Ensure container was created with correct network mode
+      const newContainerInfo = await newContainer.inspect();
+      const actualNetworkMode = newContainerInfo.HostConfig?.NetworkMode || '';
+      if (!actualNetworkMode.startsWith('container:')) {
+        console.error(`🚨 CRITICAL ERROR: Post-creation verification failed!`);
+        console.error(`❌ Container was created with network mode: ${actualNetworkMode}`);
+        console.error(`🛑 Stopping and removing potentially unsafe container...`);
+        await newContainer.stop();
+        await newContainer.remove();
+        throw new Error('Post-creation network mode verification failed - container removed for safety');
+      }
+      
       console.log(`✅ Successfully recreated container: ${container.name}`);
+      console.log(`🔒 Verified secure network mode: ${actualNetworkMode}`);
     } catch (error) {
       console.error(`❌ Failed to recreate container ${container.name}:`, error);
       throw error;
