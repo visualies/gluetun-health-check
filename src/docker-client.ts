@@ -260,17 +260,16 @@ export class DockerClient {
       }
       
       // Create a new container with updated configuration
+      // Start with the complete original configuration
       const createOptions = {
-        Image: containerInfo.Config.Image,
-        Cmd: containerInfo.Config.Cmd,
-        Env: containerInfo.Config.Env,
-        // Remove ExposedPorts when using container network mode
+        // Preserve ALL original Config settings
+        ...containerInfo.Config,
+        // Only override network-incompatible settings
         ExposedPorts: updatedHostConfig.NetworkMode.startsWith('container:') ? undefined : containerInfo.Config.ExposedPorts,
-        Labels: containerInfo.Config.Labels,
-        WorkingDir: containerInfo.Config.WorkingDir,
-        User: containerInfo.Config.User,
+        // Preserve ALL original HostConfig settings with network mode update
         HostConfig: updatedHostConfig,
-        name: containerInfo.Name.substring(1), // Remove leading slash
+        // Set the container name (remove leading slash from inspect result)
+        name: containerInfo.Name.substring(1),
       };
       
       // FINAL SAFETY CHECK: Verify create options have secure network mode
@@ -281,6 +280,7 @@ export class DockerClient {
       }
       
       console.log(`🔒 SECURE: Creating container with network mode: ${createOptions.HostConfig.NetworkMode}`);
+      console.log(`📋 Preserving ALL original settings: Image, Env (${containerInfo.Config.Env?.length || 0} vars), Labels, Volumes, Healthcheck, etc.`);
       console.log(`🏗️ Creating new container: ${container.name} -> ${container.gluetunContainer.name}`);
       const newContainer = await this.docker.createContainer(createOptions);
       
