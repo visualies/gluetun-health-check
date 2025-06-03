@@ -173,7 +173,7 @@ export class DockerClient {
     return attachedContainers;
   }
 
-  isContainerUnhealthy(container: AttachedContainer): boolean {
+  async isContainerUnhealthy(container: AttachedContainer): Promise<boolean> {
     // If container is not running, consider it unhealthy
     if (container.state !== 'running') {
       return true;
@@ -188,6 +188,26 @@ export class DockerClient {
     if (!isPointingToCurrentGluetun) {
       console.log(`🚨 Container ${container.name} is orphaned (pointing to dead network target)`);
       return true;
+    }
+    
+    // Check if Gluetun container restarted after this container (breaking network connection)
+    try {
+      const [attachedContainerInfo, gluetunContainerInfo] = await Promise.all([
+        this.docker.getContainer(container.id).inspect(),
+        this.docker.getContainer(container.gluetunContainer.id).inspect()
+      ]);
+      
+      const attachedStartTime = new Date(attachedContainerInfo.State.StartedAt);
+      const gluetunStartTime = new Date(gluetunContainerInfo.State.StartedAt);
+      
+      if (gluetunStartTime > attachedStartTime) {
+        const timeDiff = Math.round((gluetunStartTime.getTime() - attachedStartTime.getTime()) / 1000);
+        console.log(`🔄 Gluetun ${container.gluetunContainer.name} restarted ${timeDiff}s after ${container.name} - network connection broken`);
+        return true;
+      }
+    } catch (error) {
+      console.error(`⚠️ Failed to check container start times for ${container.name}:`, error);
+      // If we can't check, assume it's healthy to avoid unnecessary restarts
     }
     
     // Only check traditional health checks if enabled
@@ -345,7 +365,12 @@ export class DockerClient {
         attachedContainers.map(c => `${c.name} -> ${c.gluetunContainer.name}`));
       
       // Check health and redeploy if necessary
-      const unhealthyContainers = attachedContainers.filter(c => this.isContainerUnhealthy(c));
+      const unhealthyContainers = [];
+      for (const container of attachedContainers) {
+        if (await this.isContainerUnhealthy(container)) {
+          unhealthyContainers.push(container);
+        }
+      }
       
       if (unhealthyContainers.length === 0) {
         console.log('✅ All attached containers are healthy');
