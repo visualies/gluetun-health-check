@@ -189,30 +189,45 @@ export class DockerClient {
       }
     }
     
-    const command = `docker compose -p ${container.composeProject} -f ${composeFilePath} up -d --build --remove-orphans --force-recreate`;
-    
-    console.log(`🔧 Executing: ${command}`);
+    // Try docker compose (new) first, fallback to docker-compose (legacy)
+    const commands = [
+      `docker compose -p ${container.composeProject} -f ${composeFilePath} up -d --build --remove-orphans --force-recreate`,
+      `docker-compose -p ${container.composeProject} -f ${composeFilePath} up -d --build --remove-orphans --force-recreate`
+    ];
     
     if (this.config.dryRun) {
-      console.log(`🔍 DRY RUN: Would execute: ${command}`);
+      console.log(`🔍 DRY RUN: Would execute: ${commands[0]}`);
       return;
     }
     
-    try {
-      const { stdout, stderr } = await execAsync(command);
+    for (const command of commands) {
+      console.log(`🔧 Executing: ${command}`);
       
-      if (stdout) {
-        console.log(`✅ Redeploy stdout: ${stdout}`);
+      try {
+        const { stdout, stderr } = await execAsync(command);
+        
+        if (stdout) {
+          console.log(`✅ Redeploy stdout: ${stdout}`);
+        }
+        
+        if (stderr) {
+          console.log(`⚠️ Redeploy stderr: ${stderr}`);
+        }
+        
+        console.log(`✅ Successfully redeployed container: ${container.name}`);
+        return; // Success, exit the loop
+      } catch (error: any) {
+        console.log(`⚠️ Command failed: ${command}`);
+        
+        // If this is the last command, throw the error
+        if (command === commands[commands.length - 1]) {
+          console.error(`❌ Failed to redeploy container ${container.name}:`, error);
+          throw error;
+        }
+        
+        // Otherwise, try the next command
+        console.log(`🔄 Trying fallback command...`);
       }
-      
-      if (stderr) {
-        console.log(`⚠️ Redeploy stderr: ${stderr}`);
-      }
-      
-      console.log(`✅ Successfully redeployed container: ${container.name}`);
-    } catch (error) {
-      console.error(`❌ Failed to redeploy container ${container.name}:`, error);
-      throw error;
     }
   }
 

@@ -1,41 +1,48 @@
-FROM oven/bun:1
-
+# Build stage - dependencies only
+FROM oven/bun:1-slim AS deps
 WORKDIR /app
-
-# Install dependencies
 COPY package.json bun.lockb* ./
 RUN bun install --frozen-lockfile --production
 
-# Copy source
+# Build stage - copy source
+FROM deps AS builder
 COPY src ./src
 
-# Install Docker CLI and create smart entrypoint
-USER root
-RUN apt-get update && apt-get install -y docker.io && rm -rf /var/lib/apt/lists/*
+# Runtime stage  
+FROM oven/bun:1-slim
+WORKDIR /app
 
-# Smart entrypoint for Docker socket permissions
+# Copy app from builder
+COPY --from=builder /app ./
+
+# Install Docker CLI and docker-compose in single layer
+USER root
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        docker.io \
+        curl \
+        ca-certificates && \
+    curl -L "https://github.com/docker/compose/releases/download/v2.24.1/docker-compose-linux-$(uname -m)" -o /usr/local/bin/docker-compose && \
+    chmod +x /usr/local/bin/docker-compose && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get clean
+
+# Create optimized entrypoint
 COPY <<EOF /entrypoint.sh
 #!/bin/bash
 set -e
 
 if [ -S /var/run/docker.sock ]; then
     DOCKER_SOCKET_GID=\$(stat -c '%g' /var/run/docker.sock)
-    
-    # Check if a group with this GID already exists
     EXISTING_GROUP=\$(getent group \$DOCKER_SOCKET_GID | cut -d: -f1)
     
     if [ -n "\$EXISTING_GROUP" ]; then
-        # Group with this GID exists, use it
         usermod -aG \$EXISTING_GROUP bun
     else
-        # No group with this GID exists, create one
-        # Check if 'docker' group name is free
         if getent group docker > /dev/null 2>&1; then
-            # Docker group exists with different GID, create with different name
             groupadd -g \$DOCKER_SOCKET_GID dockersock
             usermod -aG dockersock bun
         else
-            # Docker group doesn't exist, create it
             groupadd -g \$DOCKER_SOCKET_GID docker
             usermod -aG docker bun
         fi
