@@ -169,7 +169,13 @@ export class DockerClient {
       console.log(`🗑️ Removing container: ${container.name}`);
       await dockerContainer.remove();
       
-      // Create a new container with the same configuration
+      // Update network mode to point to current Gluetun container
+      const updatedHostConfig = {
+        ...containerInfo.HostConfig,
+        NetworkMode: `container:${container.gluetunContainer.id}`
+      };
+      
+      // Create a new container with updated configuration
       const createOptions = {
         Image: containerInfo.Config.Image,
         Cmd: containerInfo.Config.Cmd,
@@ -178,11 +184,11 @@ export class DockerClient {
         Labels: containerInfo.Config.Labels,
         WorkingDir: containerInfo.Config.WorkingDir,
         User: containerInfo.Config.User,
-        HostConfig: containerInfo.HostConfig,
+        HostConfig: updatedHostConfig,
         name: containerInfo.Name.substring(1), // Remove leading slash
       };
       
-      console.log(`🏗️ Creating new container: ${container.name}`);
+      console.log(`🏗️ Creating new container: ${container.name} -> ${container.gluetunContainer.name}`);
       const newContainer = await this.docker.createContainer(createOptions);
       
       console.log(`▶️ Starting container: ${container.name}`);

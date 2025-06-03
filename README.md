@@ -163,11 +163,11 @@ When recreating an unhealthy container, the application:
 - User settings
 
 **🔄 Recreates Fresh:**
-- **Network configuration** - Gets new Gluetun container ID automatically
+- **Network configuration** - Updates to point to current running Gluetun container
 - Container ID and name
 - Process state
 
-**Why this matters:** When Gluetun restarts, attached containers become unhealthy because they're still pointing to the old Gluetun container ID. Recreation allows Docker to automatically reattach to the current running Gluetun container.
+**Why this matters:** When Gluetun restarts, attached containers become unhealthy because they're still pointing to the old Gluetun container ID. Recreation updates the network mode to point to the current running Gluetun container, allowing proper reattachment.
 
 ## Container Health Detection
 
