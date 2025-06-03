@@ -12,6 +12,14 @@
     "test": "node --loader ts-node/esm src/test.ts",
     "start:node": "node --loader ts-node/esm src/index.ts"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/gluetun-health-check.git"
+  },
+  "homepage": "https://github.com/your-username/gluetun-health-check#readme",
+  "bugs": {
+    "url": "https://github.com/your-username/gluetun-health-check/issues"
+  },
   "dependencies": {
     "dockerode": "^4.0.2"
   },
@@ -22,7 +30,15 @@
     "ts-node": "^10.9.1",
     "typescript": "^5.3.3"
   },
-  "keywords": ["docker", "health-check", "gluetun", "container-monitoring"],
+  "keywords": [
+    "docker", 
+    "health-check", 
+    "gluetun", 
+    "container-monitoring",
+    "vpn",
+    "auto-recovery",
+    "docker-compose"
+  ],
   "author": "",
   "license": "MIT"
 } 

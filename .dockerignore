@@ -6,8 +6,31 @@ Dockerfile
 .gitignore
 README.md
 .env
+.env.*
 .nyc_output
 coverage
 .vscode
+.idea
 dist
-*.log 
+*.log
+*.md
+!src/
+
+# GitHub
+.github
+
+# Test files
+test-html/
+docker-compose.test.yml
+docker-compose.example.yml
+
+# Build artifacts
+*.tgz
+*.tar.gz
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Bun
+.bun/ 

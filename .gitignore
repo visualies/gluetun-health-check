@@ -1,0 +1,25 @@
+node_modules/
+dist/
+*.log
+.env
+.env.local
+.env.production
+.env.test
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Bun
+bun.lockb
+.bun/
+
+# Test artifacts
+test-html/
+docker-compose.test.yml
+
+# Build artifacts
+*.tgz
+*.tar.gz 

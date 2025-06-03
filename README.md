@@ -12,6 +12,36 @@ A Bun application that monitors Docker containers attached to Gluetun VPN contai
 
 No manual configuration or container listing required - just start the monitor and it handles everything automatically!
 
+## Quick Start
+
+### Using Pre-built Image (Recommended)
+
+```bash
+# Run with Docker
+docker run -d \
+  --name gluetun-health-check \
+  --restart unless-stopped \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  ghcr.io/your-username/gluetun-health-check:latest
+```
+
+### Using Docker Compose
+
+```yaml
+version: '3.8'
+services:
+  gluetun-health-check:
+    image: ghcr.io/your-username/gluetun-health-check:latest
+    container_name: gluetun-health-check
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Optional: Override defaults
+    environment:
+      - CHECK_INTERVAL=30000  # 30 seconds
+      - DRY_RUN=false
+```
+
 ## Features
 
 - 🔍 **Auto-discovery**: Automatically detects Gluetun containers by image name pattern
@@ -44,6 +74,28 @@ Configure the application using environment variables:
 
 ## Usage
 
+### Using Pre-built Image
+
+The easiest way to use this application is with the pre-built Docker image from GitHub Container Registry:
+
+```bash
+# Basic usage
+docker run -d \
+  --name gluetun-health-check \
+  --restart unless-stopped \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  ghcr.io/your-username/gluetun-health-check:latest
+
+# With custom configuration
+docker run -d \
+  --name gluetun-health-check \
+  --restart unless-stopped \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e CHECK_INTERVAL=60000 \
+  -e DRY_RUN=true \
+  ghcr.io/your-username/gluetun-health-check:latest
+```
+
 ### Development
 
 ```bash
@@ -57,34 +109,21 @@ bun run dev
 bun run start
 ```
 
-### Docker
+### Building from Source
 
 ```bash
+# Clone the repository
+git clone https://github.com/your-username/gluetun-health-check.git
+cd gluetun-health-check
+
 # Build the Docker image
 docker build -t gluetun-health-check .
 
-# Run the container with Docker socket access
+# Run the locally built image
 docker run -d \
   --name gluetun-health-check \
   -v /var/run/docker.sock:/var/run/docker.sock \
   gluetun-health-check
-```
-
-### Docker Compose
-
-```yaml
-version: '3.8'
-services:
-  gluetun-health-check:
-    build: .
-    container_name: gluetun-health-check
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    # Optional: Override defaults
-    environment:
-      - CHECK_INTERVAL=30000  # 30 seconds
-      - DRY_RUN=false
 ```
 
 ## Advanced Gluetun Detection
@@ -185,4 +224,16 @@ The application provides detailed logging with emojis for easy identification:
 - Verify compose project labels are correctly set
 
 ### Enable dry run mode
-Set `DRY_RUN=true` to see what commands would be executed without actually running them. 
+Set `DRY_RUN=true` to see what commands would be executed without actually running them.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test locally with `bun run test`
+5. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details. 
