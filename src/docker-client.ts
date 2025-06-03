@@ -175,12 +175,18 @@ export class DockerClient {
         NetworkMode: `container:${container.gluetunContainer.id}`
       };
       
+      // Remove port bindings when using container network mode
+      if (updatedHostConfig.NetworkMode.startsWith('container:')) {
+        delete updatedHostConfig.PortBindings;
+      }
+      
       // Create a new container with updated configuration
       const createOptions = {
         Image: containerInfo.Config.Image,
         Cmd: containerInfo.Config.Cmd,
         Env: containerInfo.Config.Env,
-        ExposedPorts: containerInfo.Config.ExposedPorts,
+        // Remove ExposedPorts when using container network mode
+        ExposedPorts: updatedHostConfig.NetworkMode.startsWith('container:') ? undefined : containerInfo.Config.ExposedPorts,
         Labels: containerInfo.Config.Labels,
         WorkingDir: containerInfo.Config.WorkingDir,
         User: containerInfo.Config.User,
