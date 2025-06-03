@@ -142,8 +142,7 @@ export class DockerClient {
           if (!targetContainerExists) {
             console.log(`🔍 Found orphaned container: ${container.name} -> dead container ${targetContainerId.substring(0, 12)}...`);
             
-            // Try to find a suitable current Gluetun container to attach to
-            // Use the first available Gluetun container as the target
+            // Only try to reattach if we have available Gluetun containers
             if (gluetunContainers.length > 0) {
               // Prefer actual Gluetun VPN containers over health check monitors
               const actualGluetunContainers = gluetunContainers.filter(g => 
@@ -163,6 +162,8 @@ export class DockerClient {
               };
               
               attachedContainers.push(orphanedContainer);
+            } else {
+              console.log(`⚠️ Cannot reattach ${container.name} - no Gluetun containers available`);
             }
           }
         }
@@ -269,6 +270,7 @@ export class DockerClient {
       
       if (gluetunContainers.length === 0) {
         console.log('⚠️ No Gluetun containers found. Skipping health check.');
+        console.log('💡 Containers cannot be restarted without a Gluetun instance to attach to.');
         return;
       }
       
