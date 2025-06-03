@@ -88,7 +88,10 @@ export class DockerClient {
       // This would require inspecting the container more deeply, but for now we'll skip
       
       if (isGluetun) {
-        console.log(`🔍 Detected Gluetun container: ${container.name} (${container.image})`);
+        const containerType = container.image.includes('gluetun-health-check') || container.name.includes('gluetun-health-check')
+          ? '(Health Check Monitor)'
+          : '(VPN Container)';
+        console.log(`🔍 Detected Gluetun container: ${container.name} ${containerType} - ${container.image}`);
         gluetunContainers.push({
           id: container.id,
           name: container.name,
@@ -142,7 +145,16 @@ export class DockerClient {
             // Try to find a suitable current Gluetun container to attach to
             // Use the first available Gluetun container as the target
             if (gluetunContainers.length > 0) {
-              const targetGluetunContainer = gluetunContainers[0];
+              // Prefer actual Gluetun VPN containers over health check monitors
+              const actualGluetunContainers = gluetunContainers.filter(g => 
+                !g.image.includes('gluetun-health-check') && 
+                !g.name.includes('gluetun-health-check')
+              );
+              
+              const targetGluetunContainer = actualGluetunContainers.length > 0 
+                ? actualGluetunContainers[0] 
+                : gluetunContainers[0]; // Fallback to any Gluetun if no actual VPN found
+              
               console.log(`🎯 Will reattach ${container.name} to current Gluetun: ${targetGluetunContainer.name}`);
               
               const orphanedContainer: AttachedContainer = {
