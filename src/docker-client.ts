@@ -106,6 +106,9 @@ export class DockerClient {
   ): Promise<AttachedContainer[]> {
     const attachedContainers: AttachedContainer[] = [];
     
+    // Create a map of all existing container IDs for quick lookup
+    const existingContainerIds = new Set(containers.map(c => c.id));
+    
     for (const container of containers) {
       // Skip if this is a Gluetun container itself
       if (gluetunContainers.some(g => g.id === container.id)) {
@@ -116,18 +119,40 @@ export class DockerClient {
       if (container.networkMode.startsWith('container:')) {
         const targetContainerId = container.networkMode.replace('container:', '');
         
-        // Check if the target container is one of our Gluetun containers
-        const gluetunContainer = gluetunContainers.find(g => 
+        // Method 1: Check if pointing to current Gluetun containers
+        const currentGluetunContainer = gluetunContainers.find(g => 
           g.id === targetContainerId || g.id.startsWith(targetContainerId)
         );
         
-        if (gluetunContainer) {
+        if (currentGluetunContainer) {
           const attachedContainer: AttachedContainer = {
             ...container,
-            gluetunContainer,
+            gluetunContainer: currentGluetunContainer,
           };
           
           attachedContainers.push(attachedContainer);
+        } else {
+          // Method 2: Check if pointing to a non-existent container (orphaned)
+          const targetContainerExists = existingContainerIds.has(targetContainerId) || 
+            containers.some(c => c.id.startsWith(targetContainerId));
+          
+          if (!targetContainerExists) {
+            console.log(`🔍 Found orphaned container: ${container.name} -> dead container ${targetContainerId.substring(0, 12)}...`);
+            
+            // Try to find a suitable current Gluetun container to attach to
+            // Use the first available Gluetun container as the target
+            if (gluetunContainers.length > 0) {
+              const targetGluetunContainer = gluetunContainers[0];
+              console.log(`🎯 Will reattach ${container.name} to current Gluetun: ${targetGluetunContainer.name}`);
+              
+              const orphanedContainer: AttachedContainer = {
+                ...container,
+                gluetunContainer: targetGluetunContainer,
+              };
+              
+              attachedContainers.push(orphanedContainer);
+            }
+          }
         }
       }
     }
@@ -138,6 +163,17 @@ export class DockerClient {
   isContainerUnhealthy(container: AttachedContainer): boolean {
     // If container is not running, consider it unhealthy
     if (container.state !== 'running') {
+      return true;
+    }
+    
+    // Check if container is pointing to a dead network target (orphaned)
+    // This happens when Gluetun restarts and gets a new container ID
+    const currentNetworkTarget = container.networkMode.replace('container:', '');
+    const isPointingToCurrentGluetun = container.gluetunContainer.id === currentNetworkTarget || 
+                                      container.gluetunContainer.id.startsWith(currentNetworkTarget);
+    
+    if (!isPointingToCurrentGluetun) {
+      console.log(`🚨 Container ${container.name} is orphaned (pointing to dead network target)`);
       return true;
     }
     
