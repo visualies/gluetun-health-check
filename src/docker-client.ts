@@ -10,7 +10,9 @@ export class DockerClient {
   private config: HealthCheckConfig;
 
   constructor(config: HealthCheckConfig) {
-    this.docker = new Docker({ socketPath: '/var/run/docker.sock' });
+    this.docker = new Docker({ 
+      socketPath: '/var/run/docker.sock'
+    });
     this.config = config;
   }
 
@@ -52,7 +54,7 @@ export class DockerClient {
       
       return containerInfos;
     } catch (error) {
-      console.error('Error fetching containers:', error);
+      console.error('❌ Error fetching containers:', error);
       throw error;
     }
   }

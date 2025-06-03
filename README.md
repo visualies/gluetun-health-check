@@ -17,7 +17,7 @@ No manual configuration or container listing required - just start the monitor a
 ### Using Pre-built Image (Recommended)
 
 ```bash
-# Run with Docker
+# Run with Docker - no special flags needed!
 docker run -d \
   --name gluetun-health-check \
   --restart unless-stopped \
@@ -208,6 +208,21 @@ The application provides detailed logging with emojis for easy identification:
 - Consider using Docker socket proxy for additional security
 
 ## Troubleshooting
+
+### Docker Socket Connection Issues
+
+The application **automatically handles Docker socket permissions** with no configuration required!
+
+**Standard Usage:**
+```bash
+docker run -d \
+  --name gluetun-health-check \
+  --restart unless-stopped \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  ghcr.io/visualies/gluetun-health-check:latest
+```
+
+The smart entrypoint automatically detects and configures Docker socket permissions securely.
 
 ### No Gluetun containers found
 - Check that your Gluetun containers are running
