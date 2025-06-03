@@ -2,6 +2,16 @@
 
 A Bun application that monitors Docker containers attached to Gluetun VPN containers and automatically redeploys them when they become unhealthy.
 
+## 🚀 **Zero Configuration Required**
+
+**This application works out-of-the-box with full auto-discovery!** Simply run it and it will:
+- 🔍 **Auto-detect** Gluetun containers using multiple detection methods
+- 🔗 **Auto-discover** containers attached to Gluetun networks
+- 🏥 **Auto-monitor** their health status
+- 🔄 **Auto-redeploy** unhealthy containers using their existing Docker Compose configuration
+
+No manual configuration or container listing required - just start the monitor and it handles everything automatically!
+
 ## Features
 
 - 🔍 **Auto-discovery**: Automatically detects Gluetun containers by image name pattern
@@ -25,10 +35,12 @@ Configure the application using environment variables:
 
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
-| `CHECK_INTERVAL` | `300000` | Health check interval in milliseconds (5 minutes) |
+| `CHECK_INTERVAL` | `30000` | Health check interval in milliseconds (30 seconds) |
 | `GLUETUN_IMAGE_PATTERN` | `gluetun` | Pattern to match Gluetun container images |
 | `UNHEALTHY_THRESHOLD` | `2` | Number of consecutive health check failures before redeployment |
 | `DRY_RUN` | `false` | If `true`, logs what would be done without executing |
+
+**Note**: All configuration is optional - the app works perfectly with default settings!
 
 ## Usage
 
@@ -55,10 +67,6 @@ docker build -t gluetun-health-check .
 docker run -d \
   --name gluetun-health-check \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  -e CHECK_INTERVAL=300000 \
-  -e GLUETUN_IMAGE_PATTERN=gluetun \
-  -e UNHEALTHY_THRESHOLD=2 \
-  -e DRY_RUN=false \
   gluetun-health-check
 ```
 
@@ -73,19 +81,32 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    # Optional: Override defaults
     environment:
-      - CHECK_INTERVAL=300000  # 5 minutes
-      - GLUETUN_IMAGE_PATTERN=gluetun
-      - UNHEALTHY_THRESHOLD=2
+      - CHECK_INTERVAL=30000  # 30 seconds
       - DRY_RUN=false
 ```
+
+## Advanced Gluetun Detection
+
+The application uses **multiple robust detection methods** to find Gluetun containers:
+
+1. **Image Pattern Matching**: Checks if image name contains "gluetun" (configurable)
+2. **Container Labels**: Looks for:
+   - `app=gluetun`
+   - `image=*gluetun*` 
+   - `gluetun.enabled=true`
+3. **Container Name**: Checks if container name contains "gluetun"
+4. **Future-ready**: Extensible for environment variable/port detection
+
+This multi-method approach ensures reliable detection regardless of how your Gluetun containers are configured.
 
 ## How Containers Are Detected
 
 The application looks for containers with:
 
 1. **Network Mode**: `container:GLUETUN_CONTAINER_ID`
-2. **Gluetun Container**: Must have image matching the pattern (default: contains "gluetun")
+2. **Gluetun Container**: Must match one of the detection methods above
 3. **Compose Labels**: Uses Docker Compose labels to determine redeployment commands:
    - `com.docker.compose.project`: The compose project name
    - `com.docker.compose.project.config_files`: Path to the compose file

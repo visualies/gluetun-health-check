@@ -11,13 +11,14 @@ services:
       # Optional: If you need to access compose files from host
       # - /path/to/compose/files:/compose:ro
     environment:
-      # Health check interval in milliseconds (5 minutes)
-      - CHECK_INTERVAL=300000
-      # Pattern to match Gluetun container images  
+      # All environment variables are OPTIONAL - app works with auto-discovery!
+      # Health check interval in milliseconds (30 seconds default)
+      - CHECK_INTERVAL=30000
+      # Pattern to match Gluetun container images (default: gluetun)
       - GLUETUN_IMAGE_PATTERN=gluetun
-      # Number of consecutive failures before redeployment
+      # Number of consecutive failures before redeployment (default: 2)
       - UNHEALTHY_THRESHOLD=2
-      # Enable dry run mode for testing
+      # Enable dry run mode for testing (default: false)
       - DRY_RUN=false
     # Optional: Resource limits
     deploy:

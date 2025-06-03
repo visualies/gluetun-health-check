@@ -2,7 +2,7 @@ import type { HealthCheckConfig } from './types.js';
 
 export function loadConfig(): HealthCheckConfig {
   return {
-    checkInterval: parseInt(process.env.CHECK_INTERVAL || '300000'), // 5 minutes default
+    checkInterval: parseInt(process.env.CHECK_INTERVAL || '30000'), // 30 seconds default
     gluetunImagePattern: process.env.GLUETUN_IMAGE_PATTERN || 'gluetun',
     unhealthyThreshold: parseInt(process.env.UNHEALTHY_THRESHOLD || '2'),
     dryRun: process.env.DRY_RUN === 'true',
