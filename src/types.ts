@@ -32,4 +32,5 @@ export interface HealthCheckConfig {
   gluetunImagePattern: string;
   unhealthyThreshold: number;
   dryRun: boolean;
+  enableHealthChecks: boolean;
 } 

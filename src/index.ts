@@ -2,6 +2,7 @@
 
 import { DockerClient } from './docker-client.js';
 import { loadConfig, printConfig } from './config.js';
+import { HealthCheckConfig } from './types.js';
 
 async function main() {
   console.log('🚀 Starting Gluetun Health Check Monitor');

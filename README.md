@@ -1,14 +1,16 @@
 # Gluetun Health Check Monitor
 
-A Bun application that monitors Docker containers attached to Gluetun VPN containers and automatically redeploys them when they become unhealthy.
+A Bun application that monitors Docker containers attached to Gluetun VPN containers and automatically redeploys them when they become orphaned (pointing to dead Gluetun containers).
 
 ## 🚀 **Zero Configuration Required**
 
 **This application works out-of-the-box with full auto-discovery!** Simply run it and it will:
 - 🔍 **Auto-detect** Gluetun containers using multiple detection methods
 - 🔗 **Auto-discover** containers attached to Gluetun networks
-- 🏥 **Auto-monitor** their health status
-- 🔄 **Auto-redeploy** unhealthy containers using their existing Docker Compose configuration
+- 🚨 **Auto-monitor** for orphaned containers (pointing to dead Gluetun instances)
+- 🔄 **Auto-redeploy** orphaned containers to attach them to current Gluetun containers
+
+**Primary Focus**: Handles the "Gluetun restart scenario" where attached containers lose network connectivity when Gluetun gets a new container ID.
 
 No manual configuration or container listing required - just start the monitor and it handles everything automatically!
 
@@ -41,15 +43,16 @@ services:
     environment:
       - CHECK_INTERVAL=30000  # 30 seconds
       - DRY_RUN=false
+      - ENABLE_HEALTH_CHECKS=false  # Enable traditional health check monitoring (default: false)
 ```
 
 ## Features
 
 - 🔍 **Auto-discovery**: Automatically detects Gluetun containers by image name pattern
 - 🔗 **Network Detection**: Finds containers using `container:` network mode attached to Gluetun
-- 🏥 **Health Monitoring**: Monitors container health status and running state
-- 🔄 **Auto-redeployment**: Automatically redeploys unhealthy containers using Docker Compose
-- 📊 **Smart Compose Detection**: Extracts compose project and file information from container labels
+- 🚨 **Orphaned Container Detection**: Detects containers pointing to dead Gluetun instances (primary feature)
+- 🏥 **Optional Health Monitoring**: Traditional health check monitoring (disabled by default)
+- 🔄 **Auto-redeployment**: Automatically redeploys orphaned containers with updated network configuration
 - ⚙️ **Configurable**: Environment variable based configuration
 - 🧪 **Dry Run Mode**: Test mode to see what would be redeployed without actually doing it
 

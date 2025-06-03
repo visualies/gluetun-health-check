@@ -177,13 +177,13 @@ export class DockerClient {
       return true;
     }
     
-    // If container has health check, use that
-    if (container.health) {
+    // Only check traditional health checks if enabled
+    if (this.config.enableHealthChecks && container.health) {
       return container.health.status === 'unhealthy' && 
              container.health.failingStreak >= this.config.unhealthyThreshold;
     }
     
-    // If no health check is defined, assume it's healthy if running
+    // If no health check is enabled or defined, assume it's healthy if running and not orphaned
     return false;
   }
 
